@@ -179,6 +179,7 @@ plt.show()
 # Output Waveform
 ### ASK
 <img width="1118" height="852" alt="image" src="https://github.com/user-attachments/assets/63bd7e00-77db-47fd-b18d-55407646ab1f" />
+
 ### FSK
 <img width="1070" height="846" alt="image" src="https://github.com/user-attachments/assets/ddc73c8d-c39d-4e9e-9020-36d8a0cd5a9c" />
 
