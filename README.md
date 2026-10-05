@@ -8,80 +8,66 @@ Google colab
 ```
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import butter, lfilter
 
-# Butterworth Low-Pass Filter
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    nyquist = 0.5 * fs
-    normal_cutoff = cutoff / nyquist
-    b, a = butter(order, normal_cutoff, btype='low', analog=False)
-    return lfilter(b, a, data)
+fs = 1000
+fc = 50
 
-# Parameters
-fs = 1000            # Sampling frequency (Hz)
-f_carrier = 50       # Carrier frequency (Hz)
-bit_rate = 10        # Bits per second
-T = 1                # Duration (seconds)
+# Generate random bits
+bits = np.random.randint(0, 2, 10)
+print("Original Bits :", bits)
 
-# Time vector
-t = np.linspace(0, T, int(fs * T), endpoint=False)
+t = np.arange(0, 1, 1/fs)
 
-# Generate random binary data
-bits = np.random.randint(0, 2, bit_rate)
-print("Original Bits:", bits)
+bit_duration = len(t) // len(bits)
+message = np.repeat(bits, bit_duration)
 
-# Convert bits into a digital message signal
-bit_duration = fs // bit_rate
-message_signal = np.repeat(bits, bit_duration)
-
-# Carrier signal
-carrier = np.sin(2 * np.pi * f_carrier * t)
+# Carrier
+carrier = np.sin(2 * np.pi * fc * t)
 
 # ASK Modulation
-ask_signal = message_signal * carrier
+ask = message * carrier
 
-# ASK Demodulation (Coherent Detection)
-demodulated = ask_signal * carrier
-
-# Low-pass filtering
-filtered_signal = butter_lowpass_filter(demodulated, f_carrier, fs)
+# ASK Demodulation
+demod = ask * carrier
 
 # Decode bits
-decoded_bits = (filtered_signal[::bit_duration] > 0.25).astype(int)
-print("Decoded Bits :", decoded_bits)
+decoded = []
 
-# ---------------- Plotting ----------------
+for i in range(len(bits)):
+    start = i * bit_duration
+    end = (i + 1) * bit_duration
 
+    value = np.mean(demod[start:end])
+    decoded.append(1 if value > 0.2 else 0)
+
+print("Decoded Bits  :", decoded)
+
+# Plotting
 plt.figure(figsize=(12, 10))
 
-# Message Signal
 plt.subplot(4, 1, 1)
-plt.plot(t, message_signal, color='blue')
+plt.plot(t, message)
 plt.title("Message Signal (Binary)")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.grid(True)
 
-# Carrier Signal
 plt.subplot(4, 1, 2)
-plt.plot(t, carrier, color='green')
+plt.plot(t, carrier)
 plt.title("Carrier Signal")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.grid(True)
 
-# ASK Modulated Signal
 plt.subplot(4, 1, 3)
-plt.plot(t, ask_signal, color='red')
+plt.plot(t, ask)
 plt.title("ASK Modulated Signal")
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
 plt.grid(True)
 
-# Decoded Bits
 plt.subplot(4, 1, 4)
-plt.step(np.arange(len(decoded_bits)), decoded_bits, where='mid',
-         color='purple', marker='o')
+plt.step(np.arange(len(decoded)), decoded, where='mid', marker='o')
 plt.title("Decoded Bits")
 plt.xlabel("Bit Index")
 plt.ylabel("Bit Value")
@@ -95,84 +81,84 @@ plt.show()
 ```
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import butter, lfilter
-
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    nyquist = 0.5 * fs
-    normal_cutoff = cutoff / nyquist
-    b, a = butter(order, normal_cutoff, btype='low', analog=False)
-    return lfilter(b, a, data)
 
 fs = 1000
 f1 = 30
 f2 = 70
-bit_rate = 10
-T = 1
 
-t = np.linspace(0, T, int(fs * T), endpoint=False)
+bits = np.random.randint(0, 2, 10)
+print("Original bits:", bits)
 
-bits = np.random.randint(0, 2, bit_rate)
-bit_duration = fs // bit_rate
-message_signal = np.repeat(bits, bit_duration)
+t = np.arange(0, 1, 1/fs)
 
-carrier_f1 = np.sin(2 * np.pi * f1 * t)
-carrier_f2 = np.sin(2 * np.pi * f2 * t)
+bit_dur = len(t) // len(bits)
+message = np.repeat(bits, bit_dur)
 
-fsk_signal = np.zeros_like(t)
+# Carrier signals
+carrier1 = np.sin(2 * np.pi * f1 * t)
+carrier2 = np.sin(2 * np.pi * f2 * t)
 
-for i, bit in enumerate(bits):
-    start = i * bit_duration
-    end = start + bit_duration
-    freq = f2 if bit else f1
-    fsk_signal[start:end] = np.sin(2 * np.pi * freq * t[start:end])
+# FSK Modulation
+fsk = np.zeros(len(t))
 
-ref_f1 = np.sin(2 * np.pi * f1 * t)
-ref_f2 = np.sin(2 * np.pi * f2 * t)
+for i in range(len(bits)):
+    start = i * bit_dur
+    end = (i + 1) * bit_dur
 
-corr_f1 = butter_lowpass_filter(fsk_signal * ref_f1, f2, fs)
-corr_f2 = butter_lowpass_filter(fsk_signal * ref_f2, f2, fs)
+    if bits[i] == 0:
+        fsk[start:end] = carrier1[start:end]
+    else:
+        fsk[start:end] = carrier2[start:end]
 
-decoded_bits = []
+# FSK Demodulation
+decoded = []
 
-for i in range(bit_rate):
-    start = i * bit_duration
-    end = start + bit_duration
+for i in range(len(bits)):
+    start = i * bit_dur
+    end = (i + 1) * bit_dur
 
-    energy_f1 = np.sum(corr_f1[start:end] ** 2)
-    energy_f2 = np.sum(corr_f2[start:end] ** 2)
+    power1 = np.mean(fsk[start:end] * carrier1[start:end])
+    power2 = np.mean(fsk[start:end] * carrier2[start:end])
 
-    decoded_bits.append(1 if energy_f2 > energy_f1 else 0)
+    if power2 > power1:
+        decoded.append(1)
+    else:
+        decoded.append(0)
 
-decoded_bits = np.array(decoded_bits)
-demodulated_signal = np.repeat(decoded_bits, bit_duration)
+print("Decoded bits:", decoded)
 
-plt.figure(figsize=(12, 12))
+# Plotting
 
-plt.subplot(6, 1, 1)
-plt.plot(t, message_signal, color='b')
-plt.title('Message Signal')
+plt.figure(figsize=(12, 10))
+
+plt.subplot(4, 1, 1)
+plt.plot(t, message)
+plt.title("Message Signal")
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
 plt.grid(True)
 
-plt.subplot(6, 1, 2)
-plt.plot(t, carrier_f1, color='g')
-plt.title('Carrier Signal for bit = 0 (f1)')
+plt.subplot(4, 1, 2)
+plt.plot(t, carrier1)
+plt.title("Carrier Signal f1 (Bit = 0)")
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
 plt.grid(True)
 
-plt.subplot(6, 1, 3)
-plt.plot(t, carrier_f2, color='r')
-plt.title('Carrier Signal for bit = 1 (f2)')
+plt.subplot(4, 1, 3)
+plt.plot(t, fsk)
+plt.title("FSK Modulated Signal")
+plt.xlabel("Time")
+plt.ylabel("Amplitude")
 plt.grid(True)
 
-plt.subplot(6, 1, 4)
-plt.plot(t, fsk_signal, color='m')
-plt.title('FSK Modulated Signal')
+plt.subplot(4, 1, 4)
+plt.step(np.arange(len(decoded)), decoded, where='mid', marker='o')
+plt.title("Decoded Bits")
+plt.xlabel("Bit Index")
+plt.ylabel("Bit Value")
 plt.grid(True)
-
-plt.subplot(6, 1, 5)
-plt.plot(t, demodulated_signal, color='k')
-plt.title('Final Demodulated Signal')
-plt.grid(True)
-
+ 
 plt.tight_layout()
 plt.show()
 ```
